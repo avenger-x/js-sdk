@@ -95,10 +95,5 @@
   ],
   "engines": {
     "node": ">=8.0.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsc --p src/tsconfig.json && lint-staged"
-    }
   }
 }
