@@ -115,6 +115,9 @@ export default class POSRootChainManager extends ContractsBase {
       throw new Error('posRootChainManager address not found. Set it while constructing MaticPOSClient.')
     }
     const payload = await this.exitManager.buildPayloadForExit(burnTxHash, logSignature, this.requestConcurrency)
+    if(options && options.payload) {
+      return payload
+    }
     const txObject = this.posRootChainManager.methods.exit(payload)
     const web3Options = await this.web3Client.fillOptions(txObject, true /* onRootChain */, options)
     if (web3Options.encodeAbi) {
