@@ -1,0 +1,976 @@
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var web3_1 = __importDefault(require("web3"));
+//import console from 'console'
+//import { Contract } from 'web3-eth-contract'
+//import Tronweb from 'tronweb'
+var TronContractsBase_1 = __importDefault(require("../common/TronContractsBase"));
+var TronExitManager_1 = __importDefault(require("../common/TronExitManager"));
+// import { Utils } from '../common/Utils'
+var ERC20_TRANSFER_EVENT_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+var ERC721_TRANSFER_EVENT_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+var ERC721_WITHDRAW_BATCH_EVENT_SIG = '0xf871896b17e9cb7a64941c62c188a4f5c621b86800e3d15452ece01ce56073df';
+var ERC1155_TRANSFER_SINGLE_EVENT_SIG = '0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62';
+var ERC1155_TRANSFER_BATCH_EVENT_SIG = '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb';
+var MESSAGE_SENT_EVENT_SIG = '0x8c5261668696ce22758910d05bab8f186d6eb247ceac2af2e82c7dc17669b036';
+var TRANSFER_WITH_METADATA_EVENT_SIG = '0xf94915c6d1fd521cee85359239227480c7e8776d7caf1fc3bacad5c269b66a14';
+var web3 = new web3_1.default();
+var abiCoder = web3.eth.abi;
+var POSRootChainManager = /** @class */ (function (_super) {
+    __extends(POSRootChainManager, _super);
+    function POSRootChainManager(options, rootChain, web3Client) {
+        var _this = _super.call(this, web3Client, options.network) || this;
+        // public utils: Utils
+        _this.formatUint256 = _this.encode;
+        //this.utils = new Utils()
+        _this.posRootChainManager = {
+            tronWeb: _this.web3Client.parentWeb3,
+            abi: options.network.abi('RootChainManager', 'pos'),
+            token: options.posRootChainManager || options.network.Main.POSContracts.RootChainManagerProxy,
+        };
+        _this.rootTunnelContractAbi = options.network.abi('RootTunnel', 'pos');
+        _this.exitManager = new TronExitManager_1.default(rootChain, options, web3Client);
+        _this.erc20Predicate = options.posERC20Predicate || options.network.Main.POSContracts.ERC20PredicateProxy;
+        _this.erc721Predicate = options.posERC721Predicate || options.network.Main.POSContracts.ERC721PredicateProxy;
+        _this.erc1155Predicate = options.posERC1155Predicate || options.network.Main.POSContracts.ERC1155PredicateProxy;
+        _this.erc1155MintablePredicate =
+            options.posMintableERC1155Predicate || options.network.Main.POSContracts.MintableERC1155PredicateProxy;
+        _this.requestConcurrency = options.requestConcurrency;
+        return _this;
+    }
+    POSRootChainManager.prototype.getPredicateAddress = function (rootToken) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contract, tokenType, predicateAddress;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)
+                        // const tokenType = await this.posRootChainManager.methods.tokenToType(rootToken).call()
+                    ];
+                    case 1:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.tokenToType(rootToken).call()];
+                    case 2:
+                        tokenType = _a.sent();
+                        if (!tokenType) {
+                            throw new Error('Invalid Token Type');
+                        }
+                        return [4 /*yield*/, contract.methods.typeToPredicate(tokenType).call()];
+                    case 3:
+                        predicateAddress = _a.sent();
+                        return [2 /*return*/, predicateAddress];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositEtherForUser = function (amount, user, options) {
+        if (options === void 0) { options = {}; }
+        return __awaiter(this, void 0, void 0, function () {
+            var contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)
+                        //const txObject = this.posRootChainManager.methods.depositEtherFor(user)
+                    ];
+                    case 1:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.depositEtherFor(user)];
+                    case 2:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, Object.assign(options, { value: this.formatUint256(amount) }))];
+                    case 3:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, {
+                                    data: txObject.encodeABI(),
+                                    to: contract.address /*this.posRootChainManager.options.address*/,
+                                })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositFor = function (user, rootToken, depositData, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)];
+                    case 1:
+                        contract = _a.sent();
+                        if (!contract.address /*!this.posRootChainManager.options.address*/) {
+                            throw new Error('posRootChainManager address not found. Set it while constructing MaticPOSClient.');
+                        }
+                        return [4 /*yield*/, contract.methods.depositFor(user, rootToken, depositData)];
+                    case 2:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 3:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, {
+                                    data: txObject.encodeABI(),
+                                    to: contract.address /*this.posRootChainManager.options.address*/,
+                                })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    /*async getPayload(burnTxHash: string) {
+      if (!this.posRootChainManager.options.address) {
+        throw new Error('posRootChainManager address not found. Set it while constructing MaticPOSClient.')
+      }
+      const payload = await this.exitManager.buildPayloadForTronExit(burnTxHash, ERC20_TRANSFER_EVENT_SIG, this.requestConcurrency)
+      return payload
+    }*/
+    POSRootChainManager.prototype.exit = function (burnTxHash, logSignature, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contract, payload, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)];
+                    case 1:
+                        contract = _a.sent();
+                        if (!contract.address /*!this.posRootChainManager.options.address*/) {
+                            throw new Error('posRootChainManager address not found. Set it while constructing MaticPOSClient.');
+                        }
+                        return [4 /*yield*/, this.exitManager.buildPayloadForExit(burnTxHash, logSignature, this.requestConcurrency)
+                            //const txObject = this.posRootChainManager.methods.exit(payload)
+                            //Private key does not match address in transaction
+                        ];
+                    case 2:
+                        payload = _a.sent();
+                        return [4 /*yield*/, contract.methods.exit(payload)
+                            //const txObject = await contract.methods.exit(payload).call()
+                        ];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, {
+                                    data: txObject.encodeABI(),
+                                    to: contract.address /*this.posRootChainManager.options.address*/,
+                                })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitFastMerkle = function (start, end, blockNumber) {
+        return __awaiter(this, void 0, void 0, function () {
+            var proof;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.exitManager.buildPayloadForExitFastMerkle(start, end, blockNumber)];
+                    case 1:
+                        proof = _a.sent();
+                        return [2 /*return*/, proof];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitHermoine = function (burnTxHash, logSignature, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contract, payload, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)];
+                    case 1:
+                        contract = _a.sent();
+                        if (!contract.address /*!this.posRootChainManager.options.address*/) {
+                            throw new Error('posRootChainManager address not found. Set it while constructing MaticPOSClient.');
+                        }
+                        return [4 /*yield*/, this.exitManager.buildPayloadForExitHermoine(burnTxHash, logSignature)
+                            // const txObject = this.posRootChainManager.methods.exit(payload)
+                        ];
+                    case 2:
+                        payload = _a.sent();
+                        txObject = contract.methods.exit(payload);
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 3:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, {
+                                    data: txObject.encodeABI(),
+                                    to: contract.address /*this.posRootChainManager.options.address*/,
+                                })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.getERC20ExitPayload = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            var payload;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.exitManager.buildPayloadForExit(burnTxHash, ERC20_TRANSFER_EVENT_SIG)];
+                    case 1:
+                        payload = _a.sent();
+                        return [2 /*return*/, payload];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.isExitProcessed = function (burnTxHash, logSignature) {
+        return __awaiter(this, void 0, void 0, function () {
+            var exitHash, contract, process;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.exitManager.getExitHash(burnTxHash, logSignature, this.requestConcurrency)];
+                    case 1:
+                        exitHash = _a.sent();
+                        return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.posRootChainManager.abi, this.posRootChainManager.token)];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.processedExits(exitHash).call()];
+                    case 3:
+                        process = _a.sent();
+                        return [2 /*return*/, process]; //this.posRootChainManager.methods.processedExits(exitHash).call()
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.processReceivedMessage = function (contractAddress, txHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var payload, rootTunnelContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.exitManager.buildPayloadForExitHermoine(txHash, MESSAGE_SENT_EVENT_SIG)];
+                    case 1:
+                        payload = _a.sent();
+                        return [4 /*yield*/, this.posRootChainManager.tronWeb.contract(this.rootTunnelContractAbi, contractAddress)
+                            //let rootTunnelContract = new this.web3Client.parentWeb3.eth.Contract(this.rootTunnelContractAbi, contractAddress)
+                        ];
+                    case 2:
+                        rootTunnelContract = _a.sent();
+                        return [4 /*yield*/, rootTunnelContract.methods.receiveMessage(payload)];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, {
+                                    data: txObject.encodeABI(),
+                                    to: rootTunnelContract.address /*this.posRootChainManager.options.address*/,
+                                })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.customPayload = function (txHash, eventSig) {
+        return __awaiter(this, void 0, void 0, function () {
+            var payload;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.exitManager.buildPayloadForExitHermoine(txHash, eventSig)];
+                    case 1:
+                        payload = _a.sent();
+                        return [2 /*return*/, payload];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveERC20 = function (rootToken, amount, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getPredicateAddress(rootToken)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC20TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const txObject = this.getPOSERC20TokenContract(rootToken, true).methods.approve(
+                              predicate,
+                              this.formatUint256(amount)
+                            )*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.approve(predicate, this.formatUint256(amount))];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveMaxERC20 = function (rootToken, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getPredicateAddress(rootToken)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC20TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const txObject = this.getPOSERC20TokenContract(rootToken, true).methods.approve(
+                              predicate,
+                              '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+                            )*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.approve(predicate, '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.allowanceOfERC20 = function (userAddress, token, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, allowance;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (options && (!token || !userAddress)) {
+                            throw new Error('token address or user address is missing');
+                        }
+                        return [4 /*yield*/, this.getPredicateAddress(token)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC20TokenContract(token, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, token, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const allowance = await this.getPOSERC20TokenContract(token, true)
+                              .methods.allowance(userAddress, predicate)
+                              .call()*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.allowance(userAddress, predicate).call()];
+                    case 3:
+                        allowance = _a.sent();
+                        return [2 /*return*/, allowance];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositERC20ForUser = function (rootToken, amount, user, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var depositData;
+            return __generator(this, function (_a) {
+                depositData = abiCoder.encodeParameter('uint256', this.formatUint256(amount));
+                return [2 /*return*/, this.depositFor(user, rootToken, depositData, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnERC20 = function (opt, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC20TokenContract(opt.childToken);
+                        if (opt.withdrawTo) {
+                            txObject = childTokenContract.methods.withdrawTo(opt.to, this.formatUint256(opt.amount));
+                        }
+                        else {
+                            txObject = childTokenContract.methods.withdraw(this.formatUint256(opt.amount));
+                        }
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: opt.childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitTronERC20 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC20_TRANSFER_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC20 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC20_TRANSFER_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC20Hermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, ERC20_TRANSFER_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.isERC20ExitProcessed = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.isExitProcessed(burnTxHash, ERC20_TRANSFER_EVENT_SIG)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveERC721 = function (rootToken, tokenId, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getPredicateAddress(rootToken)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC721TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const txObject = this.getPOSERC721TokenContract(rootToken, true).methods.approve(
+                              predicate,
+                              this.formatUint256(tokenId)
+                            )*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.approve(predicate, this.formatUint256(tokenId))];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.isApprovedERC721 = function (token, tokenId, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, approved;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (options && !token) {
+                            throw new Error('token address is missing');
+                        }
+                        return [4 /*yield*/, this.getPredicateAddress(token)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC721TokenContract(token, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, token, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const approved = await this.getPOSERC721TokenContract(token, true)
+                              .methods.getApproved(tokenId)
+                              .call()*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.getApproved(tokenId).call()];
+                    case 3:
+                        approved = _a.sent();
+                        return [2 /*return*/, approved == predicate];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveAllERC721 = function (rootToken, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getPredicateAddress(rootToken)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC721TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            //const txObject = this.getPOSERC721TokenContract(rootToken, true).methods.setApprovalForAll(predicate, true)
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.setApprovalForAll(predicate, true)];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.isApprovedForAllERC721 = function (token, userAddress, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, approved;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (options && !token) {
+                            throw new Error('token address is missing');
+                        }
+                        return [4 /*yield*/, this.getPredicateAddress(token)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC721TokenContract(token, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, token, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const approved = await this.getPOSERC721TokenContract(token, true)
+                              .methods.isApprovedForAll(userAddress, predicate)
+                              .call()*/
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.isApprovedForAll(userAddress, predicate).call()];
+                    case 3:
+                        approved = _a.sent();
+                        return [2 /*return*/, approved];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositERC721ForUser = function (rootToken, tokenId, user, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var depositData;
+            return __generator(this, function (_a) {
+                depositData = abiCoder.encodeParameter('uint256', this.formatUint256(tokenId));
+                return [2 /*return*/, this.depositFor(user, rootToken, depositData, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositBatchERC721ForUser = function (rootToken, tokenIds, user, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var tokenIdArray, depositData;
+            var _this = this;
+            return __generator(this, function (_a) {
+                tokenIdArray = tokenIds.map(function (tokenId) {
+                    return _this.formatUint256(tokenId);
+                });
+                depositData = abiCoder.encodeParameter('uint256[]', tokenIdArray);
+                return [2 /*return*/, this.depositFor(user, rootToken, depositData, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnERC721 = function (opt, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC721TokenContract(opt.childToken);
+                        if (opt.withdrawTo) {
+                            txObject = childTokenContract.methods.withdrawTo(opt.to, this.formatUint256(opt.tokenId));
+                        }
+                        else {
+                            txObject = childTokenContract.methods.withdraw(this.formatUint256(opt.tokenId));
+                        }
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: opt.childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnWithMetadataERC721 = function (childToken, tokenId, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC721TokenContract(childToken);
+                        txObject = childTokenContract.methods.withdraw(this.formatUint256(tokenId));
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeAbi(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnBatchERC721 = function (childToken, tokenIds, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var tokenIdArray, childTokenContract, txObject, _options;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        tokenIdArray = tokenIds.map(function (tokenId) {
+                            return _this.formatUint256(tokenId);
+                        });
+                        childTokenContract = this.getPOSERC721TokenContract(childToken);
+                        txObject = childTokenContract.methods.withdrawBatch(tokenIdArray);
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        _options = _a.sent();
+                        if (_options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(_options, { data: txObject.encodeABI(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, _options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC721 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC721_TRANSFER_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitBatchERC721 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC721_WITHDRAW_BATCH_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC721WithMetadata = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, TRANSFER_WITH_METADATA_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC721WithMetadataHermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, TRANSFER_WITH_METADATA_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitBatchERC721Hermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, ERC721_WITHDRAW_BATCH_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitERC721Hermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, ERC721_TRANSFER_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.isERC721ExitProcessed = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.isExitProcessed(burnTxHash, ERC721_TRANSFER_EVENT_SIG)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.isBatchERC721ExitProcessed = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.isExitProcessed(burnTxHash, ERC721_WITHDRAW_BATCH_EVENT_SIG)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveERC1155 = function (rootToken, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var predicate, tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getPredicateAddress(rootToken)];
+                    case 1:
+                        predicate = _a.sent();
+                        tronWebOptions = this.getPOSERC1155TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            //const txObject = this.getPOSERC1155TokenContract(rootToken, true).methods.setApprovalForAll(predicate, true)
+                        ];
+                    case 2:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.setApprovalForAll(predicate, true)];
+                    case 3:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 4:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.approveMintableERC1155 = function (rootToken, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var tronWebOptions, contractAddress, contract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.erc1155Predicate) {
+                            throw new Error('posERC1155Predicate address not found. Set it while constructing MaticPOSClient.');
+                        }
+                        tronWebOptions = this.getPOSERC1155TokenContract(rootToken, true);
+                        contractAddress = this.utils.transferAddress(this.posRootChainManager.tronWeb, rootToken, false);
+                        return [4 /*yield*/, tronWebOptions.web3.contract(tronWebOptions.abi, contractAddress)
+                            /*const txObject = this.getPOSERC1155TokenContract(rootToken, true).methods.setApprovalForAll(
+                              this.erc1155MintablePredicate,
+                              true
+                            )*/
+                        ];
+                    case 1:
+                        contract = _a.sent();
+                        return [4 /*yield*/, contract.methods.setApprovalForAll(this.erc1155MintablePredicate, true)];
+                    case 2:
+                        txObject = _a.sent();
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, true /* onRootChain */, options)];
+                    case 3:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: rootToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositSingleERC1155ForUser = function (rootToken, tokenId, amount, user, data, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var depositData;
+            return __generator(this, function (_a) {
+                depositData = abiCoder.encodeParameters(['uint256[]', 'uint256[]', 'bytes'], [[this.formatUint256(tokenId)], [this.formatUint256(amount)], data || '0x0']);
+                return [2 /*return*/, this.depositFor(user, rootToken, depositData, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.depositBatchERC1155ForUser = function (rootToken, tokenIds, amounts, user, data, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var depositData;
+            var _this = this;
+            return __generator(this, function (_a) {
+                depositData = abiCoder.encodeParameters(['uint256[]', 'uint256[]', 'bytes'], [tokenIds.map(function (t) { return _this.formatUint256(t); }), amounts.map(function (a) { return _this.formatUint256(a); }), data || '0x0']);
+                return [2 /*return*/, this.depositFor(user, rootToken, depositData, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnSingleERC1155 = function (childToken, tokenId, amount, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC1155TokenContract(childToken);
+                        txObject = childTokenContract.methods.withdrawSingle(this.formatUint256(tokenId), this.formatUint256(amount));
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.burnBatchERC1155 = function (childToken, tokenIds, amounts, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC1155TokenContract(childToken);
+                        txObject = childTokenContract.methods.withdrawBatch(tokenIds.map(function (t) { return _this.formatUint256(t); }), amounts.map(function (a) { return _this.formatUint256(a); }));
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitSingleERC1155 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC1155_TRANSFER_SINGLE_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitSingleERC1155Hermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, ERC1155_TRANSFER_SINGLE_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.isSingleERC1155ExitProcessed = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.isExitProcessed(burnTxHash, ERC1155_TRANSFER_SINGLE_EVENT_SIG)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitBatchERC1155 = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exit(burnTxHash, ERC1155_TRANSFER_BATCH_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.exitBatchERC1155Hermoine = function (burnTxHash, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.exitHermoine(burnTxHash, ERC1155_TRANSFER_BATCH_EVENT_SIG, options)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.isBatchERC1155ExitProcessed = function (burnTxHash) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.isExitProcessed(burnTxHash, ERC1155_TRANSFER_BATCH_EVENT_SIG)];
+            });
+        });
+    };
+    POSRootChainManager.prototype.mintERC721 = function (childToken, userAddress, tokenId, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC721TokenContract(childToken);
+                        txObject = childTokenContract.methods.mint(userAddress, this.formatUint256(tokenId));
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeAbi(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.mintERC1155 = function (childToken, userAddress, tokenId, amount, data, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, depositData, txObject, web3Options;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC1155TokenContract(childToken);
+                        depositData = abiCoder.encodeParameters(['uint256[]', 'uint256[]', 'bytes'], [[this.formatUint256(tokenId)], [this.formatUint256(amount)], data || '0x0']);
+                        txObject = childTokenContract.methods.mint(userAddress, tokenId, amount, depositData);
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    POSRootChainManager.prototype.mintBatchERC1155ForUser = function (childToken, tokenIds, amounts, userAddress, data, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var childTokenContract, depositData, txObject, web3Options;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        childTokenContract = this.getPOSERC721TokenContract(childToken);
+                        depositData = abiCoder.encodeParameters(['uint256[]', 'uint256[]', 'bytes'], [tokenIds.map(function (t) { return _this.formatUint256(t); }), amounts.map(function (a) { return _this.formatUint256(a); }), data || '0x0']);
+                        txObject = childTokenContract.methods.mint(userAddress, tokenIds, amounts, depositData);
+                        return [4 /*yield*/, this.web3Client.fillOptions(txObject, false /* onRootChain */, options)];
+                    case 1:
+                        web3Options = _a.sent();
+                        if (web3Options.encodeAbi) {
+                            return [2 /*return*/, Object.assign(web3Options, { data: txObject.encodeABI(), to: childToken })];
+                        }
+                        return [2 /*return*/, this.web3Client.send(txObject, web3Options, options)];
+                }
+            });
+        });
+    };
+    return POSRootChainManager;
+}(TronContractsBase_1.default));
+exports.default = POSRootChainManager;
